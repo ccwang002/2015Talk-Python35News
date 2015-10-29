@@ -223,7 +223,7 @@ S = trans_coef.T @ solve(H @ V @ H.T, trans_coef)</code></pre>
       </ul>
   </div></section>
 
-  <section class="slide"><div>
+  <section id="pep448" class="slide"><div>
       <h2>PEP 448 Additional Unpacking Generalizations</h2>
       <p class="tighter">如何覆寫 dict 設定？</p>
       <pre class="language-python"><code>default = {'a': 1, 'b': 2}
@@ -232,7 +232,6 @@ override = {'a': 3, 'c': 4}
 final = default.copy()
 final.update(override)  # {'a': 3, 'b': 2, 'c': 4}</code></pre>
   </div></section>
-
 
   <section class="slide"><div>
       <p class="tighter">With PEP 448,</p>
@@ -246,7 +245,6 @@ final = {'a': 1, 'b': 2, **override}</code>
       </pre>
       <p>以前在函式呼叫 f(*args, **kwargs) 就有，現在能用的地方變多了。</p>
   </div></section>
-
 
   <section class="slide"><div>
       <h2>Combining Iterables</h2>
@@ -271,7 +269,6 @@ TypeError: can only concatenate list (not "tuple")
       </pre>
   </div></section>
 
-
   <section class="slide"><div>
       <h2>With PEP 448</h2>
       <pre class="language-python">
@@ -282,7 +279,6 @@ TypeError: can only concatenate list (not "tuple")
       </pre>
   </div></section>
 
-
   <section class="slide"><div>
       <h2>Other usage of PEP 448</h2>
       <pre class="language-python">
@@ -292,7 +288,7 @@ TypeError: can only concatenate list (not "tuple")
 >>> [(*t, 'love') for t in final.items()]
 [('b', 2, 'love'), ('a', 3, 'love'), ...]</code></pre>
   </div></section>
-    
+
   <section class="slide"><div>
       <h2>Usage in function call</h2>
       <pre class="language-python"  style="width: 120%">
@@ -305,6 +301,78 @@ TypeError: f() got multiple values for keyword argument 'x'
 ((), {'x': 3})</code>
       </pre>
   </div></section>
+
+  <section id="subprocess-run" class="slide"><div>
+      <h2>Subprocess.run</h2>
+      <ul>
+        <li>Combine <code>call()</code>, <code>check_call()</code>, <code>check_output()</code></li>
+        <li>Return <a href="https://docs.python.org/3.5/library/subprocess.html#subprocess.CompletedProcess"><code>CompletedProcess</code></a> instance for execution detail</li>
+        <li><code>run()</code> is Blocking, use <a href="https://docs.python.org/3.5/library/subprocess.html#subprocess.Popen"><code>Popen</code></a> for non-blocking or better control.</li>
+        <li>Same interface as <code>Popen</code></li>
+      </ul>
+  </div></section>
+
+  <section class="slide"><div>
+      <pre class="language-python">
+<code>>>> import subprocess as sp
+>>> sp.run(['ls', '-a'])
+CompletedProcess(args=['ls', '-a'], returncode=0)
+
+>>> p = sp.run(['ls', '-ap'], stdout=sp.PIPE)
+>>> print(p.stdout.decode())
+./
+../
+Misc.ipynb</code></pre>
+  </div></section>
+
+  <section class="slide"><div>
+      <pre class="language-python">
+<code>>>> p = sp.run(['ls', 'T___T'])
+>>> p.returncode
+1
+>>> p.check_returncode()
+CalledProcessError: ... non-zero exit status 1
+
+# All in one line
+>>> sp.run(['ls', 'T___T'], check=True)
+CalledProcessError: ... non-zero exit status 1
+</code></pre>
+  </div></section>
+
+  <section id="byte-format" class="slide"><div>
+      <h2>Byte formatting</h2>
+      <pre class="language-python">
+<code>>>> '(%(eye)s.%(eye)s)' % {'eye': '^'}
+'(^.^)'
+>>> b'(%(eye)s.%(eye)s)' % {b'eye': b'^'}
+b'(^.^)'
+# using %s in bytes is deprecated (= %b)
+>>> b'(%(eye)b.%(eye)b)' % {b'eye': b'T'}
+b'(T.T)'</code></pre>
+  </div></section>
+
+  <section class="slide"><div>
+      <pre class="language-python">
+      <code>>>> b = 'Hello 你好'.encode()
+b'Hello \xe4\xbd\xa0\xe5\xa5\xbd'
+>>> b.hex()
+'48656c6c6f20e4bda0e5a5bd'
+>>> bytes.fromhex(
+...     '48 65 6C 6C 6F 20'  # H  e  l  l  o
+...     'E4BDA0 E5A5BD'      #    你     好
+... ).decode()
+'Hello 你好'</code></pre>
+  </div></section>
+
+  <section class="slide"><div>
+      <h2>But bytes has no .format</h2>
+      <pre class="language-python">
+      <code>>>> b'({0}{1}{0})'.format('^', '.')
+AttributeError:
+'bytes' object has no attribute 'format'</code></pre>
+  </div></section>
+
+
   <!-- No time for these ----
   <section id="semantic-search-cover" class="slide cover w subheader mid2"><div>
       <h2>Semantic Search</h2>
