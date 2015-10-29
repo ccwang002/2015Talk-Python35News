@@ -32,7 +32,7 @@
     <h1>What's New in Python 3.5 (partial)?</h1>
     <p style="line-height: 32px; padding-top:15px;"><a href="http://liang2.tw">Liang Bo Wang (亮亮)</a>, 2015-10-29</p>
   </header>
-  <!-- Cover slide -->
+  <!-- Cover slide ----
   <section id="cover" class="slide cover w"><div>
       <h3 id="talk-subheader">Taipei.py, 2015-10-29</h3>
       <h2 id="talk-header" class="place">What's New in<br>Python 3.5 (partial)?</h2>
@@ -107,7 +107,205 @@
       }
     </style>
   </section>
+  ---- --!>
+  <section id="pep465" class="slide"><div>
+      <h2>PEP 465 - @ operator</h2>
+      <p>為何要多一個 @？專為矩陣乘法 matrix multiplication 設計。$$
+\begin{bmatrix}
+1 & 2 \\
+3 & 4
+\end{bmatrix} \cdot
+\begin{bmatrix}
+11 & 12 \\
+13 & 14
+\end{bmatrix} =
+\begin{bmatrix}
+1 \cdot 11 + 2 \cdot 13 & 1 \cdot 12 + 2 \cdot 14\\
+3 \cdot 11 + 4 \cdot 13 & 3 \cdot 12 + 4 \cdot 14\\
+\end{bmatrix}
+$$ 對應另一個是 elementwise 操作：$$
+\begin{bmatrix}
+1 & 2 \\
+3 & 4
+\end{bmatrix} \times
+\begin{bmatrix}
+11 & 12 \\
+13 & 14
+\end{bmatrix} =
+\begin{bmatrix}
+1 \cdot 11 & 2 \cdot 12\\
+3 \cdot 13 & 4 \cdot 14
+\end{bmatrix}
+$$</p>
+  </div></section>
 
+  <section class="slide"><div>
+      <ul>
+        <li>在 stdlib 裡並沒有支援 @-op 的 type，僅提供
+          <code>__matmul__</code>、<code>__rmatmul__</code>、<code>__imatmul__</code>
+          自行 override</li>
+        <li>現階段有支援 @-op 的第三方 type：
+          Numpy 1.10+ 的 <code>array</code></li>
+        <li>然後我已經不想在回答安裝 Numpy 的問題了<br>
+          <span class="red">請直接用 <a href="https://www.continuum.io/downloads">anaconda</a> 吧</span></li>
+      </ul>
+<pre class="language-bash">
+<code>conda create -n sci35 python=3.5 "numpy>=1.10"
+activate sci35</code></pre>
+  </div></section>
+
+  <section class="slide"><div>
+      <h2>Numpy(np) array operations</h2>
+      <p>Elementwise: <code>arrA * arrB</code>
+        (<a href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.multiply.html"
+          >np.multiply</a>)</p>
+      <p>Matrix mul. aka dot: <code>arrA @ arrB</code>
+        (<a href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.dot.html"
+          >np.dot</a> but actually is
+        <a href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.matmul.html#numpy.matmul"
+          >np.matmul</a>)</p>
+  </div></section>
+
+  <section class="slide"><div>
+      <h2>Why?</h2>
+      <p>簡單版回答：因為 <code>np.dot</code> 太常用了。</p>
+      <p>把這個式子用 numpy 來寫會如何？$$
+S = (H\beta -r )^\top(HVH^\top)^{-1}(H\beta -r)
+$$<span class="red next">會很醜</span></p>
+  </div></section>
+
+  <section class="slide"><div>
+      <p class="tighter">目標：\(S = (H\beta -r )^\top(HVH^\top)^{-1}(H\beta -r)\)</p>
+      <pre class="language-python">
+<code># Using dot function:
+S = np.dot(
+    (np.dot(H, beta) - r).T,
+    np.dot(inv(np.dot(np.dot(H, V), H.T)),
+           np.dot(H, beta) - r)
+)</code></pre>
+  </div></section>
+
+  <section class="slide"><div>
+      <p class="tighter">目標：\(S = (H\beta -r )^\top(HVH^\top)^{-1}(H\beta -r)\)</p>
+      <pre class="language-python" style="width: 120%">
+<code># Using dot method:
+S = (H.dot(beta) - r).T.dot(
+  inv(H.dot(V).dot(H.T))
+).dot(H.dot(beta) - r)
+
+# Using @-op:
+S = (H @ beta - r).T @ inv(H @ V @ H.T) @ (H @ beta - r)
+</code></pre>
+  </div></section>
+
+  <section class="slide"><div>
+      <h2 class="tighter">這式子計算沒效率</h2>
+<pre class="language-python" style="width: 120%">
+<code># Version 1 (as above)
+S = (H @ beta - r).T @ inv(H @ V @ H.T) @ (H @ beta - r)
+
+# Version 2
+trans_coef = H @ beta - r
+S = trans_coef.T @ inv(H @ V @ H.T) @ trans_coef
+
+# Version 3
+S = trans_coef.T @ solve(H @ V @ H.T, trans_coef)</code></pre>
+  </div></section>
+
+  <section class="slide"><div>
+      <ul>
+        <li>用原本的 <code>np.dot</code> 很醜，根本不知道自己在寫什麼</li>
+        <li>這群人寫 PEP 的時候，連 × (U+00D7) ⋅ (U+22C5) ⊗ (U+2297) ° (U+00B0) 的可能性都討論了</li>
+        <li>加入 @-op 這小事花了近七年的討論，用掉了 <a href="https://www.python.org/dev/peps/pep-0211/">PEP 211</a>、<a href="https://www.python.org/dev/peps/pep-0225/">PEP225</a> 才終於被接受（就跟 Full Metal Panic 第四季等了快十年一樣）
+        </li>
+        <li>也因此在討論時，PEP 草稿被命名為 return-of-revenge-of-matmul-pep.rst (<a href="https://github.com/numpy/numpy/pull/4351/files">numpy PR</a>)</li>
+        <li>其他語言實作 R: <code>*</code> / <code>%*%</code> MATLAB: <code>*</code> / <code>.*</code></li>
+      </ul>
+  </div></section>
+
+  <section class="slide"><div>
+      <h2>PEP 448 Additional Unpacking Generalizations</h2>
+      <p class="tighter">如何覆寫 dict 設定？</p>
+      <pre class="language-python"><code>default = {'a': 1, 'b': 2}
+override = {'a': 3, 'c': 4}
+# previous way
+final = default.copy()
+final.update(override)  # {'a': 3, 'b': 2, 'c': 4}</code></pre>
+  </div></section>
+
+
+  <section class="slide"><div>
+      <p class="tighter">With PEP 448,</p>
+      <pre class="language-python">
+      <code>default = {'a': 1, 'b': 2}
+override = {'a': 3, 'c': 4}
+final = {**default, **override}
+# {'a': 3, 'b': 2, 'c': 4}
+
+final = {'a': 1, 'b': 2, **override}</code>
+      </pre>
+      <p>以前在函式呼叫 f(*args, **kwargs) 就有，現在能用的地方變多了。</p>
+  </div></section>
+
+
+  <section class="slide"><div>
+      <h2>Combining Iterables</h2>
+      <pre class="language-python">
+      <code>a = [1, 2, 3]
+b = (4, 5, 6)
+c = 'seven'  # alone
+d = (x ** 3 for x in range(2, 5))
+e = {'a': None, 'b': False}</code></pre>
+      <p>把它們放在一個 list 裡，怎做？</p>
+  </div></section>
+
+  <section class="slide"><div>
+      <h2>Old way</h2>
+      <pre class="language-python">
+      <code>>>> a + b  # or c, d, e
+TypeError: can only concatenate list (not "tuple")
+           to list
+>>> joint = a + list(b) + [c] + list(d) + sorted(e)
+>>> joint
+[1, 2, 3, 4, 5, 6, 'seven', 8, 27, 64, 'a', 'b']</code>
+      </pre>
+  </div></section>
+
+
+  <section class="slide"><div>
+      <h2>With PEP 448</h2>
+      <pre class="language-python">
+      <code>>>> joint = [*a, *b, c, *d, *sorted(e)]
+>>> joint
+[1, 2, 3, 4, 5, 6, 'seven', 8, 27, 64, 'a', 'b']
+# c is "seven" single element</code>
+      </pre>
+  </div></section>
+
+
+  <section class="slide"><div>
+      <h2>Other usage of PEP 448</h2>
+      <pre class="language-python">
+      <code>>>> 'a: {} b: {} c: {}'.format(*[1, 2], 3)
+'a: 1 b: 2 c: 3'
+
+>>> [(*t, 'love') for t in final.items()]
+[('b', 2, 'love'), ('a', 3, 'love'), ...]</code></pre>
+  </div></section>
+    
+  <section class="slide"><div>
+      <h2>Usage in function call</h2>
+      <pre class="language-python"  style="width: 120%">
+      <code>>>> def f(*args, **kwargs):
+...     return args, kwargs
+>>> f(**{'x': 2}, **{'x': 3})
+TypeError: f() got multiple values for keyword argument 'x'
+# enclosed in a dict then unpack it
+>>> d = {**{'x': 2}, **{'x': 3}}; f(**d)
+((), {'x': 3})</code>
+      </pre>
+  </div></section>
+  <!-- No time for these ----
   <section id="semantic-search-cover" class="slide cover w subheader mid2"><div>
       <h2>Semantic Search</h2>
       <img src="pics/mid2.jpg" alt="">
@@ -130,6 +328,7 @@
   <section id="pycontw-2016" class="slide cover h"><div>
       <img src="pics/pycontw2016.png" alt="">
   </div></section>
+  ---- No time for these -->
 
   <!-- End Slide -->
   <section id='end' class='slide cover shout w'><div>

@@ -104,13 +104,16 @@ pre.medium code {
     line-height: 2em;
 }
 
-.grey {
+.grey,
+.grey a {
     color: #8E908C;
 }
-.red {
+.red,
+.red a {
     color: #D91A3C;
 }
-.blue {
+.blue,
+.blue a {
     color: #0376A6;
 }
 
